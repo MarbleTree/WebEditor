@@ -1,0 +1,91 @@
+﻿@using Microsoft.JSInterop
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+
+<h3>WebEditor</h3>
+
+<div class="editor-container" @ref="_rootElement">
+    <div class="toolbar">
+        <button type="button" data-command="bold" title="Bold"><b>B</b></button>
+        <button type="button" data-command="italic" title="Italic"><i>I</i></button>
+        <button type="button" data-command="underline" title="Underline"><u>U</u></button>
+
+        <div class="separator"></div>
+
+        <button type="button" data-command="insertUnorderedList" title="Bullet list">• List</button>
+        <button type="button" data-command="insertOrderedList" title="Numbered list">1. List</button>
+
+        <div class="separator"></div>
+
+        <button type="button" data-block="H1" title="Heading 1">H1</button>
+        <button type="button" data-block="H2" title="Heading 2">H2</button>
+        <button type="button" data-block="H3" title="Heading 3">H3</button>
+
+        <div class="separator"></div>
+
+        <button type="button" data-action="create-link" title="Insert link">Link</button>
+        <button type="button" data-action="clear-formatting" title="Clear formatting">Clear</button>
+    </div>
+
+    <div data-role="editor" class="editor" contenteditable="true">
+        <h1>Article title</h1>
+        <p>Start typing your article...</p>
+    </div>
+
+    <div class="html-preview">
+        <h2>HTML Output</h2>
+        <textarea class="html-output" data-role="html-output" readonly></textarea>
+    </div>
+
+    <div class="html-preview">
+        <h2>Document JSON Output</h2>
+        <textarea class="json-output" data-role="json-output" readonly></textarea>
+    </div>
+</div>
+
+@code {
+    private ElementReference _rootElement;
+    private DotNetObjectReference<WebEditor>? _dotNetRef;
+
+    [Parameter]
+    public string? InitialHtml { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnDocumentChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        await JS.InvokeVoidAsync("webEditorInterop.init", _rootElement, _dotNetRef, InitialHtml);
+    }
+
+    [JSInvokable]
+    public Task HandleDocumentChanged(string documentJson)
+    {
+        if (!OnDocumentChanged.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        return OnDocumentChanged.InvokeAsync(documentJson);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("webEditorInterop.dispose", _rootElement);
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _dotNetRef?.Dispose();
+    }
+}

@@ -1,0 +1,91 @@
+﻿.editor-container {
+    max-width: 1000px;
+    margin: 40px auto;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    background: #f5f5f5;
+}
+
+    .toolbar button {
+        min-width: 40px;
+        height: 32px;
+        border: 1px solid #bbb;
+        background: white;
+        cursor: pointer;
+    }
+
+        .toolbar button:hover {
+            background: #eee;
+        }
+
+.separator {
+    width: 1px;
+    height: 24px;
+    margin: 0 6px;
+    background: #ccc;
+}
+
+.editor {
+    min-height: 400px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-top: none;
+    background: white;
+    outline: none;
+    line-height: 1.6;
+}
+
+    .editor:focus {
+        border-color: #888;
+    }
+
+    .editor h1 {
+        font-size: 2em;
+    }
+
+    .editor h2 {
+        font-size: 1.5em;
+    }
+
+    .editor h3 {
+        font-size: 1.25em;
+    }
+
+    .editor blockquote {
+        margin-left: 20px;
+        padding-left: 15px;
+        border-left: 4px solid #ccc;
+    }
+
+.html-preview {
+    margin-top: 30px;
+}
+
+    .html-preview h2 {
+        font-size: 18px;
+    }
+
+.html-output,
+.json-output {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    font-family: Consolas, monospace;
+    font-size: 13px;
+    resize: vertical;
+}
+
+.html-output {
+    height: 180px;
+}
+
+.json-output {
+    height: 320px;
+}

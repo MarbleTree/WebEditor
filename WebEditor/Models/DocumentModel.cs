@@ -1,0 +1,47 @@
+namespace WebEditor.Models;
+
+public sealed class DocumentModel
+{
+    public string Schema { get; set; } = "we-content";
+
+    public int Version { get; set; } = 1;
+
+    public DocumentMeta Meta { get; set; } = new();
+
+    public List<DocumentBlock> Blocks { get; set; } = [];
+}
+
+public sealed class DocumentMeta
+{
+    public string Title { get; set; } = "Untitled";
+
+    public string Language { get; set; } = "en-US";
+}
+
+public sealed class DocumentBlock
+{
+    public string Id { get; set; } = string.Empty;
+
+    public string Type { get; set; } = string.Empty;
+
+    public int? Level { get; set; }
+
+    public bool? Ordered { get; set; }
+
+    public List<DocumentRun>? Content { get; set; }
+
+    public List<List<DocumentRun>>? Items { get; set; }
+
+    public string? AttachmentId { get; set; }
+
+    public string? Src { get; set; }
+
+    public string? Alt { get; set; }
+}
+
+public sealed class DocumentRun
+{
+    public string Text { get; set; } = string.Empty;
+
+    public List<object>? Marks { get; set; }
+}

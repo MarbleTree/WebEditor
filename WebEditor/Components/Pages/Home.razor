@@ -1,0 +1,47 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using System.Text.Json
+@using global::WebEditor.Components
+@using global::WebEditor.Models
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+<p>@article.Content</p>
+
+<WebEditor OnDocumentChanged="HandleDocumentChanged" />
+
+<div class="html-preview">
+    <h2>Captured JSON in Blazor (save-ready)</h2>
+    <textarea class="json-output" readonly>@_capturedDocumentJson</textarea>
+</div>
+
+<p><strong>Document title:</strong> @_documentTitle</p>
+<p><strong>Block count:</strong> @_blockCount</p>
+
+@code {
+    private string _capturedDocumentJson = string.Empty;
+    private string _documentTitle = "Untitled";
+    private int _blockCount;
+
+    private Article article = new()
+    {
+        Content = "This is the article content shown on the main page."
+    };
+
+    private void HandleDocumentChanged(string documentJson)
+    {
+        _capturedDocumentJson = documentJson;
+
+        var parsed = JsonSerializer.Deserialize<DocumentModel>(documentJson);
+
+        _documentTitle = parsed?.Meta?.Title ?? "Untitled";
+        _blockCount = parsed?.Blocks?.Count ?? 0;
+    }
+
+    private sealed class Article
+    {
+        public string Content { get; set; } = string.Empty;
+    }
+}
