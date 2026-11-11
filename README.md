@@ -10,7 +10,7 @@ WebEditor is a .NET 10 Blazor Server app for writing rich content, generating **
   - Bullet / Numbered lists
   - Headings (H1/H2/H3)
   - Text alignment (left/center/right/justify)
-  - Link insert
+  - Link insert / edit / remove
   - Clear formatting
 - Live output panes for:
   - HTML output

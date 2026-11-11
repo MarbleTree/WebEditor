@@ -61,6 +61,22 @@
 
 
         this.rootElement
+            .querySelector("[data-action='edit-link']")
+            ?.addEventListener("mousedown", event => {
+                event.preventDefault();
+                this.editLink();
+            });
+
+
+        this.rootElement
+            .querySelector("[data-action='remove-link']")
+            ?.addEventListener("mousedown", event => {
+                event.preventDefault();
+                this.removeLink();
+            });
+
+
+        this.rootElement
             .querySelector("[data-action='clear-formatting']")
             ?.addEventListener("mousedown", event => {
                 event.preventDefault();
@@ -148,7 +164,7 @@
 
     createLink() {
 
-        const url = prompt("Enter the URL:");
+        const url = this.normalizeUrl(prompt("Enter the URL:"));
 
         if (!url) {
             return;
@@ -159,6 +175,118 @@
         this.editorElement?.focus();
 
         this.updateOutputs();
+    }
+
+
+    editLink() {
+
+        const link = this.getActiveLinkElement();
+        const currentUrl = link?.getAttribute("href") || "";
+        const url = this.normalizeUrl(prompt("Enter the URL:", currentUrl));
+
+        if (url === null) {
+            return;
+        }
+
+        if (!url) {
+            this.removeLink();
+            return;
+        }
+
+        if (link) {
+            link.setAttribute("href", url);
+        } else {
+            document.execCommand("createLink", false, url);
+        }
+
+        this.editorElement?.focus();
+
+        this.updateOutputs();
+    }
+
+
+    removeLink() {
+
+        const link = this.getActiveLinkElement();
+
+        if (link) {
+            this.unwrapElement(link);
+        } else {
+            document.execCommand("unlink");
+        }
+
+        this.editorElement?.focus();
+
+        this.updateOutputs();
+    }
+
+
+    normalizeUrl(urlInput) {
+
+        if (urlInput === null) {
+            return null;
+        }
+
+        const url = urlInput.trim();
+
+        if (!url) {
+            return "";
+        }
+
+        if (/^(https?:|mailto:|tel:)/i.test(url)) {
+            return url;
+        }
+
+        return `https://${url}`;
+    }
+
+
+    getActiveLinkElement() {
+
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+            return null;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        return this.findClosestLink(range.startContainer)
+            || this.findClosestLink(range.endContainer)
+            || this.findClosestLink(selection.anchorNode);
+    }
+
+
+    findClosestLink(node) {
+
+        let current = node;
+
+        while (current) {
+            if (current.nodeType === Node.ELEMENT_NODE
+                && current.tagName.toUpperCase() === "A") {
+                return this.editorElement?.contains(current) ? current : null;
+            }
+
+            current = current.parentNode;
+        }
+
+        return null;
+    }
+
+
+    unwrapElement(element) {
+
+        const parent = element?.parentNode;
+
+        if (!parent) {
+            return;
+        }
+
+        while (element.firstChild) {
+            parent.insertBefore(element.firstChild, element);
+        }
+
+        element.remove();
     }
 
 
