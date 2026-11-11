@@ -1,9 +1,27 @@
 using WebEditor.Components;
+using WebEditor.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.Configure<ArticleServiceOptions>(
+    builder.Configuration.GetSection(ArticleServiceOptions.SectionName));
+
+builder.Services
+    .AddHttpClient<IArticleService, ArticleServiceClient>((serviceProvider, client) =>
+    {
+        var options = serviceProvider
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<ArticleServiceOptions>>()
+            .Value;
+
+        var baseUrl = string.IsNullOrWhiteSpace(options.BaseUrl)
+            ? ArticleServiceOptions.DefaultBaseUrl
+            : options.BaseUrl;
+
+        client.BaseAddress = new Uri(baseUrl, UriKind.Absolute);
+    });
 
 var app = builder.Build();
 

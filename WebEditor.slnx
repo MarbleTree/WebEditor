@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="WebEditor/WebEditor.csproj" />
+  <Project Path="WebEditor.Tests/WebEditor.Tests.csproj" />
 </Solution>

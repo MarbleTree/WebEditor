@@ -14,6 +14,6 @@ public class SmokeTests
         var html = await response.Content.ReadAsStringAsync();
 
         Assert.True(response.IsSuccessStatusCode);
-        Assert.Contains("Hello, world!", html, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Articles", html, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -86,9 +86,49 @@
 
         document.execCommand(command);
 
+        if (command === "insertUnorderedList" || command === "insertOrderedList") {
+            this.normalizeListMarkup();
+        }
+
         this.editorElement?.focus();
 
         this.updateOutputs();
+    }
+
+
+    normalizeListMarkup() {
+
+        if (!this.editorElement) {
+            return;
+        }
+
+        this.editorElement
+            .querySelectorAll("li > h1, li > h2, li > h3, li > h4, li > h5, li > h6")
+            .forEach(heading => {
+                const parent = heading.parentNode;
+
+                while (heading.firstChild) {
+                    parent.insertBefore(heading.firstChild, heading);
+                }
+
+                heading.remove();
+            });
+
+        this.editorElement
+            .querySelectorAll("[style]")
+            .forEach(element => {
+                if (!element.style.fontSize) {
+                    return;
+                }
+
+                element.style.fontSize = "";
+
+                const style = element.getAttribute("style")?.trim();
+
+                if (!style) {
+                    element.removeAttribute("style");
+                }
+            });
     }
 
 
@@ -188,14 +228,35 @@
         const blocks = [];
 
         this.editorElement?.childNodes.forEach(node => {
-            const block = this.toBlock(node);
-
-            if (block) {
-                blocks.push(block);
-            }
+            blocks.push(...this.toBlocks(node));
         });
 
         return blocks;
+    }
+
+
+    toBlocks(node) {
+
+        if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node;
+            const children = Array.from(element.childNodes);
+
+            const hasBlockChildren = children.some(child => this.isBlockElement(child));
+
+            if (hasBlockChildren) {
+                const blocks = [];
+
+                children.forEach(child => {
+                    blocks.push(...this.toBlocks(child));
+                });
+
+                return blocks;
+            }
+        }
+
+        const block = this.toBlock(node);
+
+        return block ? [block] : [];
     }
 
 
@@ -227,6 +288,7 @@
                 id: this.nextBlockId(),
                 type: "heading",
                 level: Number.parseInt(tag.substring(1), 10),
+                align: this.getAlignment(element),
                 content: this.getRunsFromElement(element)
             };
         }
@@ -235,6 +297,7 @@
             return {
                 id: this.nextBlockId(),
                 type: "paragraph",
+                align: this.getAlignment(element),
                 content: this.getRunsFromElement(element)
             };
         }
@@ -243,6 +306,7 @@
             return {
                 id: this.nextBlockId(),
                 type: "blockquote",
+                align: this.getAlignment(element),
                 content: this.getRunsFromElement(element)
             };
         }
@@ -257,6 +321,7 @@
                 id: this.nextBlockId(),
                 type: "list",
                 ordered: tag === "OL",
+                align: this.getAlignment(element),
                 items
             };
         }
@@ -265,6 +330,7 @@
             return {
                 id: this.nextBlockId(),
                 type: "attachment",
+                align: this.getAlignment(element),
                 attachmentId: element.getAttribute("data-attachment-id") || null,
                 src: element.getAttribute("src") || null,
                 alt: element.getAttribute("alt") || ""
@@ -274,8 +340,45 @@
         return {
             id: this.nextBlockId(),
             type: "paragraph",
+            align: this.getAlignment(element),
             content: this.getRunsFromElement(element)
         };
+    }
+
+
+    isBlockElement(node) {
+
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        }
+
+        const tag = node.tagName.toUpperCase();
+
+        return tag === "H1"
+            || tag === "H2"
+            || tag === "H3"
+            || tag === "P"
+            || tag === "BLOCKQUOTE"
+            || tag === "UL"
+            || tag === "OL"
+            || tag === "IMG"
+            || tag === "DIV";
+    }
+
+
+    getAlignment(element) {
+
+        if (!element || !element.style) {
+            return null;
+        }
+
+        const alignment = element.style.textAlign?.trim().toLowerCase();
+
+        if (!alignment) {
+            return null;
+        }
+
+        return alignment;
     }
 
 

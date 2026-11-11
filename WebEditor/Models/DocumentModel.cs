@@ -28,6 +28,8 @@ public sealed class DocumentBlock
 
     public bool? Ordered { get; set; }
 
+    public string? Align { get; set; }
+
     public List<DocumentRun>? Content { get; set; }
 
     public List<List<DocumentRun>>? Items { get; set; }

@@ -1,47 +1,333 @@
 ﻿@page "/"
 @rendermode InteractiveServer
+@using System.Net
+@using System.Text
 @using System.Text.Json
-@using global::WebEditor.Components
 @using global::WebEditor.Models
+@using global::WebEditor.Services
+@inject IArticleService ArticleService
+@inject Microsoft.Extensions.Options.IOptions<ArticleServiceOptions> ArticleServiceOptions
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Articles</h1>
 
-<p>@article.Content</p>
+@if (!string.IsNullOrWhiteSpace(_loadError))
+{
+    <p><strong>Error:</strong> @_loadError</p>
+}
+else if (_articles is null)
+{
+    <p><em>Loading articles...</em></p>
+}
+else if (_articles.Count == 0)
+{
+    <p>No articles found.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Article #</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Updated Date</th>
+                <th>Reference Count</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var article in _articles)
+            {
+                <tr class="@GetRowClass(article)" @onclick="() => SelectArticleAsync(article.Id)" style="cursor: pointer;">
+                    <td>@article.Id</td>
+                    <td>@article.Title</td>
+                    <td>@(article.Author?.ToString() ?? "-")</td>
+                    <td>@article.DateUpdated.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                    <td>@article.ReferCount</td>
+                </tr>
+            }
+        </tbody>
+    </table>
 
-<WebEditor OnDocumentChanged="HandleDocumentChanged" />
+    @if (_isLoadingDetails)
+    {
+        <p><em>Loading selected article...</em></p>
+    }
+    else if (!string.IsNullOrWhiteSpace(_detailError))
+    {
+        <p><strong>Error:</strong> @_detailError</p>
+    }
+    else if (_selectedArticle is not null)
+    {
+        <div class="html-preview">
+            <h2>JSON Content</h2>
+            <textarea class="json-output" readonly>@_selectedArticleJson</textarea>
+        </div>
 
-<div class="html-preview">
-    <h2>Captured JSON in Blazor (save-ready)</h2>
-    <textarea class="json-output" readonly>@_capturedDocumentJson</textarea>
-</div>
-
-<p><strong>Document title:</strong> @_documentTitle</p>
-<p><strong>Block count:</strong> @_blockCount</p>
+        <div class="html-preview">
+            <h2>HTML Preview</h2>
+            <div class="editor">@((MarkupString)_selectedArticlePreviewHtml)</div>
+        </div>
+    }
+}
 
 @code {
-    private string _capturedDocumentJson = string.Empty;
-    private string _documentTitle = "Untitled";
-    private int _blockCount;
+    private List<ArticleModel>? _articles;
+    private string _loadError = string.Empty;
+    private ArticleModel? _selectedArticle;
+    private long? _selectedArticleId;
+    private string _selectedArticleJson = string.Empty;
+    private string _selectedArticlePreviewHtml = string.Empty;
+    private bool _isLoadingDetails;
+    private string _detailError = string.Empty;
 
-    private Article article = new()
+    protected override async Task OnInitializedAsync()
     {
-        Content = "This is the article content shown on the main page."
-    };
+        try
+        {
+            var tenantId = ArticleServiceOptions.Value.TenantId;
+            _articles = await ArticleService.GetArticlesAsync(tenantId == Guid.Empty ? null : tenantId);
 
-    private void HandleDocumentChanged(string documentJson)
-    {
-        _capturedDocumentJson = documentJson;
-
-        var parsed = JsonSerializer.Deserialize<DocumentModel>(documentJson);
-
-        _documentTitle = parsed?.Meta?.Title ?? "Untitled";
-        _blockCount = parsed?.Blocks?.Count ?? 0;
+            if (_articles.Count > 0)
+            {
+                await SelectArticleAsync(_articles[0].Id);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            _loadError = ex.Message;
+            _articles = [];
+        }
     }
 
-    private sealed class Article
+    private async Task SelectArticleAsync(long articleId)
     {
-        public string Content { get; set; } = string.Empty;
+        _selectedArticleId = articleId;
+        _isLoadingDetails = true;
+        _detailError = string.Empty;
+
+        try
+        {
+            var article = await ArticleService.GetArticleAsync(articleId);
+            _selectedArticle = article;
+            _selectedArticleJson = PrettyPrintJson(article.Content);
+            _selectedArticlePreviewHtml = ConvertContentToHtml(article.Content);
+        }
+        catch (HttpRequestException ex)
+        {
+            _selectedArticle = null;
+            _selectedArticleJson = string.Empty;
+            _selectedArticlePreviewHtml = string.Empty;
+            _detailError = ex.Message;
+        }
+        finally
+        {
+            _isLoadingDetails = false;
+        }
+    }
+
+    private string GetRowClass(ArticleModel article)
+    {
+        return _selectedArticleId == article.Id ? "table-active" : string.Empty;
+    }
+
+    private static string PrettyPrintJson(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(content);
+            return JsonSerializer.Serialize(document.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (JsonException)
+        {
+            return content;
+        }
+    }
+
+    private static string ConvertContentToHtml(string? content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            var model = JsonSerializer.Deserialize<DocumentModel>(
+                content,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            if (model?.Blocks is null || model.Blocks.Count == 0)
+            {
+                return "<p>No content.</p>";
+            }
+
+            var builder = new StringBuilder();
+
+            foreach (var block in model.Blocks)
+            {
+                builder.Append(RenderBlock(block));
+            }
+
+            return builder.ToString();
+        }
+        catch (JsonException)
+        {
+            return $"<pre>{WebUtility.HtmlEncode(content)}</pre>";
+        }
+    }
+
+    private static string RenderBlock(DocumentBlock block)
+    {
+        var blockType = block.Type?.ToLowerInvariant();
+        var alignAttribute = BuildAlignmentAttribute(block.Align);
+
+        return blockType switch
+        {
+            "heading" => RenderHeading(block, alignAttribute),
+            "paragraph" => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>",
+            "blockquote" => $"<blockquote{alignAttribute}>{RenderRuns(block.Content)}</blockquote>",
+            "list" => RenderList(block, alignAttribute),
+            "attachment" => RenderAttachment(block, alignAttribute),
+            _ => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>"
+        };
+    }
+
+    private static string RenderHeading(DocumentBlock block, string alignAttribute)
+    {
+        var level = block.Level is >= 1 and <= 6 ? block.Level.Value : 1;
+        return $"<h{level}{alignAttribute}>{RenderRuns(block.Content)}</h{level}>";
+    }
+
+    private static string RenderList(DocumentBlock block, string alignAttribute)
+    {
+        var tag = block.Ordered == true ? "ol" : "ul";
+        var items = block.Items ?? [];
+        var builder = new StringBuilder($"<{tag}{alignAttribute}>");
+
+        foreach (var item in items)
+        {
+            builder.Append($"<li>{RenderRuns(item)}</li>");
+        }
+
+        builder.Append($"</{tag}>");
+
+        return builder.ToString();
+    }
+
+    private static string RenderAttachment(DocumentBlock block, string alignAttribute)
+    {
+        if (string.IsNullOrWhiteSpace(block.Src))
+        {
+            return string.Empty;
+        }
+
+        var src = WebUtility.HtmlEncode(block.Src);
+        var alt = WebUtility.HtmlEncode(block.Alt ?? string.Empty);
+
+        return $"<img{alignAttribute} src=\"{src}\" alt=\"{alt}\" />";
+    }
+
+    private static string BuildAlignmentAttribute(string? align)
+    {
+        if (string.IsNullOrWhiteSpace(align))
+        {
+            return string.Empty;
+        }
+
+        var normalized = align.Trim().ToLowerInvariant();
+
+        if (normalized is not ("left" or "center" or "right" or "justify"))
+        {
+            return string.Empty;
+        }
+
+        return $" style=\"text-align:{normalized};\"";
+    }
+
+    private static string RenderRuns(List<DocumentRun>? runs)
+    {
+        if (runs is null || runs.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder();
+
+        foreach (var run in runs)
+        {
+            var rendered = WebUtility.HtmlEncode(run.Text).Replace("\n", "<br />", StringComparison.Ordinal);
+            var marks = run.Marks;
+
+            if (marks is not null)
+            {
+                foreach (var mark in marks)
+                {
+                    rendered = ApplyMark(rendered, mark);
+                }
+            }
+
+            builder.Append(rendered);
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ApplyMark(string content, object mark)
+    {
+        if (mark is JsonElement element)
+        {
+            if (element.ValueKind == JsonValueKind.String)
+            {
+                return ApplyStringMark(content, element.GetString());
+            }
+
+            if (element.ValueKind == JsonValueKind.Object)
+            {
+                return ApplyObjectMark(content, element);
+            }
+        }
+
+        return mark is string stringMark
+            ? ApplyStringMark(content, stringMark)
+            : content;
+    }
+
+    private static string ApplyStringMark(string content, string? mark)
+    {
+        return mark?.ToLowerInvariant() switch
+        {
+            "bold" => $"<strong>{content}</strong>",
+            "italic" => $"<em>{content}</em>",
+            "underline" => $"<u>{content}</u>",
+            _ => content
+        };
+    }
+
+    private static string ApplyObjectMark(string content, JsonElement mark)
+    {
+        if (!mark.TryGetProperty("type", out var typeProperty))
+        {
+            return content;
+        }
+
+        if (!string.Equals(typeProperty.GetString(), "link", StringComparison.OrdinalIgnoreCase))
+        {
+            return content;
+        }
+
+        if (!mark.TryGetProperty("href", out var hrefProperty))
+        {
+            return content;
+        }
+
+        var href = WebUtility.HtmlEncode(hrefProperty.GetString() ?? string.Empty);
+        return $"<a href=\"{href}\" target=\"_blank\" rel=\"noopener noreferrer\">{content}</a>";
     }
 }

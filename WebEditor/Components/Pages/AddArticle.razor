@@ -1,0 +1,95 @@
+@page "/add-article"
+@rendermode InteractiveServer
+@using System.Text.Json
+@using global::WebEditor.Components
+@using global::WebEditor.Models
+@using global::WebEditor.Services
+@inject IArticleService ArticleService
+@inject Microsoft.Extensions.Options.IOptions<ArticleServiceOptions> ArticleServiceOptions
+
+<PageTitle>Add Article</PageTitle>
+
+<h1>Add Article</h1>
+
+<WebEditor OnDocumentChanged="HandleDocumentChanged" />
+
+<div class="html-preview">
+    <h2>Captured JSON in Blazor (save-ready)</h2>
+    <textarea class="json-output" readonly>@_capturedDocumentJson</textarea>
+</div>
+
+<p><strong>Document title:</strong> @_documentTitle</p>
+<p><strong>Block count:</strong> @_blockCount</p>
+
+<button type="button" @onclick="SaveArticleAsync" disabled="@_isSaving">Save to ArticleService</button>
+
+@if (!string.IsNullOrWhiteSpace(_saveMessage))
+{
+    <p><strong>Status:</strong> @_saveMessage</p>
+}
+
+@code {
+    private string _capturedDocumentJson = string.Empty;
+    private string _documentTitle = "Untitled";
+    private int _blockCount;
+    private bool _isSaving;
+    private string _saveMessage = string.Empty;
+    private long? _savedArticleId;
+
+    private void HandleDocumentChanged(string documentJson)
+    {
+        _capturedDocumentJson = documentJson;
+
+        var parsed = JsonSerializer.Deserialize<DocumentModel>(
+            documentJson,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        _documentTitle = parsed?.Meta?.Title ?? "Untitled";
+        _blockCount = parsed?.Blocks?.Count ?? 0;
+    }
+
+    private async Task SaveArticleAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_capturedDocumentJson))
+        {
+            _saveMessage = "Nothing to save yet.";
+            return;
+        }
+
+        _isSaving = true;
+        _saveMessage = string.Empty;
+
+        try
+        {
+            if (ArticleServiceOptions.Value.TenantId == Guid.Empty)
+            {
+                _saveMessage = "Save failed: ArticleService tenant is empty.";
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            var article = new ArticleCreateModel
+            {
+                TenantId = ArticleServiceOptions.Value.TenantId,
+                Title = _documentTitle,
+                Author = ArticleServiceOptions.Value.TenantId,
+                Content = _capturedDocumentJson,
+                DateCreated = now,
+                DateUpdated = now,
+                Attachments = []
+            };
+
+            var saved = await ArticleService.CreateArticleAsync(article);
+            _savedArticleId = saved.Id;
+            _saveMessage = $"Saved article #{saved.Id} for tenant {saved.TenantId}.";
+        }
+        catch (HttpRequestException ex)
+        {
+            _saveMessage = $"Save failed: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+}

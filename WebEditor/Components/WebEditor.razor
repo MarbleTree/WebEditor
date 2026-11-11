@@ -6,6 +6,11 @@
 
 <div class="editor-container" @ref="_rootElement">
     <div class="toolbar">
+        <button type="button" data-command="undo" title="Undo">Undo</button>
+        <button type="button" data-command="redo" title="Redo">Redo</button>
+
+        <div class="separator"></div>
+
         <button type="button" data-command="bold" title="Bold"><b>B</b></button>
         <button type="button" data-command="italic" title="Italic"><i>I</i></button>
         <button type="button" data-command="underline" title="Underline"><u>U</u></button>
@@ -20,6 +25,13 @@
         <button type="button" data-block="H1" title="Heading 1">H1</button>
         <button type="button" data-block="H2" title="Heading 2">H2</button>
         <button type="button" data-block="H3" title="Heading 3">H3</button>
+
+        <div class="separator"></div>
+
+        <button type="button" data-command="justifyLeft" title="Align left">Left</button>
+        <button type="button" data-command="justifyCenter" title="Align center">Center</button>
+        <button type="button" data-command="justifyRight" title="Align right">Right</button>
+        <button type="button" data-command="justifyFull" title="Justify">Justify</button>
 
         <div class="separator"></div>
 
