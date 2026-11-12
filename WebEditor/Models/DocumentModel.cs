@@ -34,6 +34,8 @@ public sealed class DocumentBlock
 
     public List<List<DocumentRun>>? Items { get; set; }
 
+    public List<List<List<DocumentRun>>>? Rows { get; set; }
+
     public string? AttachmentId { get; set; }
 
     public string? Src { get; set; }

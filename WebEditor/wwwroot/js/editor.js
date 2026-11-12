@@ -5,6 +5,7 @@
         this.rootElement = rootElement;
         this.dotNetRef = dotNetRef;
         this.blockIdSequence = 0;
+        this.savedRange = null;
 
         this.editorElement =
             this.rootElement.querySelector("[data-role='editor']");
@@ -28,60 +29,79 @@
 
     initializeToolbar() {
 
-        this.rootElement
-            .querySelectorAll("[data-command]")
-            .forEach(button => {
-                button.addEventListener("mousedown", event => {
-                    event.preventDefault();
+        const toolbar = this.rootElement?.querySelector(".toolbar");
 
-                    const command = button.dataset.command;
-                    this.executeCommand(command);
-                });
-            });
+        if (!toolbar) {
+            return;
+        }
 
+        toolbar.addEventListener("mousedown", event => {
+            const button = event.target?.closest("button");
 
-        this.rootElement
-            .querySelectorAll("[data-block]")
-            .forEach(button => {
-                button.addEventListener("mousedown", event => {
-                    event.preventDefault();
+            if (!button || !toolbar.contains(button)) {
+                return;
+            }
 
-                    const block = button.dataset.block;
-                    this.formatBlock(block);
-                });
-            });
+            event.preventDefault();
+        });
 
+        toolbar.addEventListener("click", event => {
+            const button = event.target?.closest("button");
 
-        this.rootElement
-            .querySelector("[data-action='create-link']")
-            ?.addEventListener("mousedown", event => {
-                event.preventDefault();
-                this.createLink();
-            });
+            if (!button || !toolbar.contains(button)) {
+                return;
+            }
 
+            event.preventDefault();
 
-        this.rootElement
-            .querySelector("[data-action='edit-link']")
-            ?.addEventListener("mousedown", event => {
-                event.preventDefault();
-                this.editLink();
-            });
+            const command = button.dataset.command;
 
+            if (command) {
+                this.executeCommand(command);
+                return;
+            }
 
-        this.rootElement
-            .querySelector("[data-action='remove-link']")
-            ?.addEventListener("mousedown", event => {
-                event.preventDefault();
-                this.removeLink();
-            });
+            const block = button.dataset.block;
 
+            if (block) {
+                this.formatBlock(block);
+                return;
+            }
 
-        this.rootElement
-            .querySelector("[data-action='clear-formatting']")
-            ?.addEventListener("mousedown", event => {
-                event.preventDefault();
-                this.clearFormatting();
-            });
+            const action = button.dataset.action;
+
+            switch (action) {
+                case "create-link":
+                    this.createLink();
+                    break;
+                case "edit-link":
+                    this.editLink();
+                    break;
+                case "remove-link":
+                    this.removeLink();
+                    break;
+                case "insert-table":
+                    this.insertTable();
+                    break;
+                case "insert-row":
+                    this.insertRow();
+                    break;
+                case "remove-row":
+                    this.removeRow();
+                    break;
+                case "insert-column":
+                    this.insertColumn();
+                    break;
+                case "remove-column":
+                    this.removeColumn();
+                    break;
+                case "clear-formatting":
+                    this.clearFormatting();
+                    break;
+                default:
+                    break;
+            }
+        });
     }
 
 
@@ -89,8 +109,15 @@
 
         this.editorElement?.addEventListener(
             "input",
-            () => this.updateOutputs()
+            () => {
+                this.rememberSelection();
+                this.updateOutputs();
+            }
         );
+
+        this.editorElement?.addEventListener("mouseup", () => this.rememberSelection());
+        this.editorElement?.addEventListener("keyup", () => this.rememberSelection());
+        this.editorElement?.addEventListener("focusin", () => this.rememberSelection());
     }
 
 
@@ -218,6 +245,397 @@
         this.editorElement?.focus();
 
         this.updateOutputs();
+    }
+
+
+    insertTable() {
+
+        const rows = this.promptDimension("Rows (1-8):", 2);
+
+        if (rows === null) {
+            return;
+        }
+
+        const columns = this.promptDimension("Columns (1-8):", 2);
+
+        if (columns === null) {
+            return;
+        }
+
+        const insertedTable = this.insertTableAtSelection(rows, columns);
+
+        if (insertedTable) {
+            this.focusCell(insertedTable.rows?.[0]?.cells?.[0] || null);
+        }
+
+        this.updateOutputs();
+    }
+
+
+    insertRow() {
+
+        const cell = this.getSelectedTableCell();
+
+        if (!cell) {
+            return;
+        }
+
+        const row = cell.parentElement;
+        const section = row?.parentElement;
+
+        if (!row || !section) {
+            return;
+        }
+
+        const newRow = document.createElement("tr");
+        const columnCount = Math.max(1, row.cells.length);
+
+        for (let i = 0; i < columnCount; i += 1) {
+            newRow.appendChild(this.createEmptyCell());
+        }
+
+        section.insertBefore(newRow, row.nextSibling);
+
+        const table = row.closest("table");
+
+        if (table) {
+            this.applyTableVisualStyle(table);
+        }
+
+        this.focusCell(newRow.cells[0]);
+
+        this.updateOutputs();
+    }
+
+
+    removeRow() {
+
+        const cell = this.getSelectedTableCell();
+
+        if (!cell) {
+            return;
+        }
+
+        const row = cell.parentElement;
+        const section = row?.parentElement;
+
+        if (!row || !section) {
+            return;
+        }
+
+        if (section.rows.length <= 1) {
+            Array.from(row.cells).forEach(currentCell => {
+                currentCell.innerHTML = "<br>";
+            });
+
+            this.focusCell(row.cells[0]);
+            this.updateOutputs();
+
+            return;
+        }
+
+        const nextRow = row.nextElementSibling || row.previousElementSibling;
+        row.remove();
+
+        const focusTarget = nextRow?.cells?.[0] || null;
+
+        if (focusTarget) {
+            this.focusCell(focusTarget);
+        }
+
+        this.updateOutputs();
+    }
+
+
+    insertColumn() {
+
+        const cell = this.getSelectedTableCell();
+
+        if (!cell) {
+            return;
+        }
+
+        const table = cell.closest("table");
+
+        if (!table) {
+            return;
+        }
+
+        const columnIndex = cell.cellIndex;
+        const insertIndex = columnIndex + 1;
+        const rowIndex = cell.parentElement?.rowIndex ?? 0;
+
+        Array.from(table.rows).forEach(row => {
+            const newCell = this.createEmptyCell();
+            const referenceCell = row.cells[insertIndex] || null;
+
+            row.insertBefore(newCell, referenceCell);
+        });
+
+        this.applyTableVisualStyle(table);
+
+        this.focusCell(table.rows[rowIndex]?.cells?.[insertIndex] || null);
+
+        this.updateOutputs();
+    }
+
+
+    removeColumn() {
+
+        const cell = this.getSelectedTableCell();
+
+        if (!cell) {
+            return;
+        }
+
+        const table = cell.closest("table");
+
+        if (!table || table.rows.length === 0) {
+            return;
+        }
+
+        const columnIndex = cell.cellIndex;
+        const maxColumns = Math.max(...Array.from(table.rows).map(row => row.cells.length));
+
+        if (maxColumns <= 1) {
+            Array.from(table.rows).forEach(row => {
+                if (row.cells[0]) {
+                    row.cells[0].innerHTML = "<br>";
+                }
+            });
+
+            this.focusCell(table.rows[cell.parentElement?.rowIndex ?? 0]?.cells?.[0] || null);
+            this.updateOutputs();
+
+            return;
+        }
+
+        Array.from(table.rows).forEach(row => {
+            if (columnIndex < row.cells.length) {
+                row.deleteCell(columnIndex);
+            }
+        });
+
+        this.applyTableVisualStyle(table);
+
+        const rowIndex = cell.parentElement?.rowIndex ?? 0;
+        const nextIndex = Math.max(0, columnIndex - 1);
+
+        this.focusCell(table.rows[rowIndex]?.cells?.[nextIndex] || null);
+
+        this.updateOutputs();
+    }
+
+
+    promptDimension(message, defaultValue) {
+
+        const value = prompt(message, String(defaultValue));
+
+        if (value === null) {
+            return null;
+        }
+
+        const parsed = Number.parseInt(value.trim(), 10);
+
+        if (!Number.isFinite(parsed) || parsed < 1 || parsed > 8) {
+            alert("Please enter a number between 1 and 8.");
+            return null;
+        }
+
+        return parsed;
+    }
+
+
+    insertTableAtSelection(rows, columns) {
+
+        if (!this.editorElement) {
+            return null;
+        }
+
+        const table = document.createElement("table");
+        const body = document.createElement("tbody");
+
+        for (let rowIndex = 0; rowIndex < rows; rowIndex += 1) {
+            const row = document.createElement("tr");
+
+            for (let columnIndex = 0; columnIndex < columns; columnIndex += 1) {
+                row.appendChild(this.createEmptyCell());
+            }
+
+            body.appendChild(row);
+        }
+
+        table.appendChild(body);
+        this.applyTableVisualStyle(table);
+
+        const trailingParagraph = document.createElement("p");
+        trailingParagraph.appendChild(document.createElement("br"));
+
+        const selection = window.getSelection();
+
+        if (!selection) {
+            return null;
+        }
+
+        this.restoreSelection();
+
+        let range = null;
+
+        if (selection.rangeCount > 0 && this.isInsideEditor(selection.anchorNode)) {
+            range = selection.getRangeAt(0);
+        } else {
+            range = this.createEditorEndRange();
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
+
+        range.deleteContents();
+
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(table);
+        fragment.appendChild(trailingParagraph);
+
+        range.insertNode(fragment);
+
+        return table;
+    }
+
+
+    createEmptyCell() {
+
+        const cell = document.createElement("td");
+        cell.appendChild(document.createElement("br"));
+
+        return cell;
+    }
+
+
+    applyTableVisualStyle(table) {
+
+        if (!table) {
+            return;
+        }
+
+        table.style.borderCollapse = "collapse";
+        table.style.width = "100%";
+        table.style.margin = "10px 0";
+
+        Array.from(table.rows).forEach(row => {
+            Array.from(row.cells).forEach(cell => {
+                cell.style.border = "1px solid #ccc";
+                cell.style.padding = "6px";
+                cell.style.minWidth = "72px";
+                cell.style.verticalAlign = "top";
+            });
+        });
+    }
+
+
+    getSelectedTableCell() {
+
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+            return null;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        return this.findClosestTableCell(range.startContainer)
+            || this.findClosestTableCell(range.endContainer)
+            || this.findClosestTableCell(selection.anchorNode);
+    }
+
+
+    findClosestTableCell(node) {
+
+        let current = node;
+
+        while (current) {
+            if (current.nodeType === Node.ELEMENT_NODE) {
+                const tag = current.tagName.toUpperCase();
+
+                if (tag === "TD" || tag === "TH") {
+                    return this.editorElement?.contains(current) ? current : null;
+                }
+            }
+
+            current = current.parentNode;
+        }
+
+        return null;
+    }
+
+
+    focusCell(cell) {
+
+        if (!cell) {
+            return;
+        }
+
+        const selection = window.getSelection();
+
+        if (!selection) {
+            return;
+        }
+
+        const range = document.createRange();
+        range.selectNodeContents(cell);
+        range.collapse(true);
+
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        this.savedRange = range.cloneRange();
+
+        this.editorElement?.focus();
+    }
+
+
+    rememberSelection() {
+
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+            return;
+        }
+
+        if (!this.isInsideEditor(selection.anchorNode)) {
+            return;
+        }
+
+        this.savedRange = selection.getRangeAt(0).cloneRange();
+    }
+
+
+    restoreSelection() {
+
+        const selection = window.getSelection();
+
+        if (!selection) {
+            return;
+        }
+
+        if (this.savedRange) {
+            selection.removeAllRanges();
+            selection.addRange(this.savedRange.cloneRange());
+        }
+    }
+
+
+    isInsideEditor(node) {
+
+        return !!(this.editorElement && node && this.editorElement.contains(node));
+    }
+
+
+    createEditorEndRange() {
+
+        const range = document.createRange();
+        range.selectNodeContents(this.editorElement);
+        range.collapse(false);
+
+        return range;
     }
 
 
@@ -454,6 +872,21 @@
             };
         }
 
+        if (tag === "TABLE") {
+            const rows =
+                Array.from(element.rows)
+                    .map(row =>
+                        Array.from(row.cells)
+                            .map(cell => this.getRunsFromElement(cell)));
+
+            return {
+                id: this.nextBlockId(),
+                type: "table",
+                align: this.getAlignment(element),
+                rows
+            };
+        }
+
         if (tag === "IMG") {
             return {
                 id: this.nextBlockId(),
@@ -489,6 +922,7 @@
             || tag === "BLOCKQUOTE"
             || tag === "UL"
             || tag === "OL"
+            || tag === "TABLE"
             || tag === "IMG"
             || tag === "DIV";
     }

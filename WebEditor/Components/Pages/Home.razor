@@ -194,6 +194,7 @@ else
             "paragraph" => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>",
             "blockquote" => $"<blockquote{alignAttribute}>{RenderRuns(block.Content)}</blockquote>",
             "list" => RenderList(block, alignAttribute),
+            "table" => RenderTable(block, alignAttribute),
             "attachment" => RenderAttachment(block, alignAttribute),
             _ => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>"
         };
@@ -217,6 +218,34 @@ else
         }
 
         builder.Append($"</{tag}>");
+
+        return builder.ToString();
+    }
+
+    private static string RenderTable(DocumentBlock block, string alignAttribute)
+    {
+        var rows = block.Rows ?? [];
+
+        if (rows.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder($"<table class=\"table table-bordered\"{alignAttribute}><tbody>");
+
+        foreach (var row in rows)
+        {
+            builder.Append("<tr>");
+
+            foreach (var cell in row)
+            {
+                builder.Append($"<td>{RenderRuns(cell)}</td>");
+            }
+
+            builder.Append("</tr>");
+        }
+
+        builder.Append("</tbody></table>");
 
         return builder.ToString();
     }

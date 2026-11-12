@@ -11,7 +11,7 @@
 
 <h1>Add Article</h1>
 
-<WebEditor OnDocumentChanged="HandleDocumentChanged" />
+<WebEditor @bind-Value="_capturedDocumentJson" OnDocumentChanged="HandleDocumentChanged" />
 
 <div class="html-preview">
     <h2>Captured JSON in Blazor (save-ready)</h2>
@@ -38,8 +38,6 @@
 
     private void HandleDocumentChanged(string documentJson)
     {
-        _capturedDocumentJson = documentJson;
-
         var parsed = JsonSerializer.Deserialize<DocumentModel>(
             documentJson,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });

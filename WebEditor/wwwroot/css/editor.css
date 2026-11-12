@@ -25,6 +25,18 @@
             background: #eee;
         }
 
+        .toolbar button .we-icon {
+            width: 16px;
+            height: 16px;
+            display: block;
+            margin: 0 auto;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.8;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
 .separator {
     width: 1px;
     height: 24px;
@@ -62,6 +74,20 @@
         margin-left: 20px;
         padding-left: 15px;
         border-left: 4px solid #ccc;
+    }
+
+    .editor table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+    }
+
+    .editor td,
+    .editor th {
+        border: 1px solid #ccc;
+        padding: 6px;
+        min-width: 72px;
+        vertical-align: top;
     }
 
 .html-preview {

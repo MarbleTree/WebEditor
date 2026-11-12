@@ -30,7 +30,7 @@ This document describes the **current** JSON format produced by `wwwroot/js/edit
 Each block has:
 
 - `id` (`string`): generated as `b1`, `b2`, ...
-- `type` (`string`): one of `heading`, `paragraph`, `blockquote`, `list`, `attachment`
+- `type` (`string`): one of `heading`, `paragraph`, `blockquote`, `list`, `table`, `attachment`
 - `align` (`string|null`, optional): text alignment when present. Supported values: `left`, `center`, `right`, `justify`.
 
 Additional fields depend on block `type`.
@@ -91,7 +91,28 @@ Additional fields depend on block `type`.
 - `ordered` (`boolean`): `true` for `<ol>`, `false` for `<ul>`
 - `items` (`array<array<run>>`): each list item is an array of runs.
 
-### 2.5 Attachment block
+### 2.5 Table block
+
+```json
+{
+  "id": "b5",
+  "type": "table",
+  "rows": [
+    [
+      [ { "text": "R1C1" } ],
+      [ { "text": "R1C2" } ]
+    ],
+    [
+      [ { "text": "R2C1" } ],
+      [ { "text": "R2C2" } ]
+    ]
+  ]
+}
+```
+
+- `rows` (`array<array<array<run>>>`): table rows -> cells -> inline runs.
+
+### 2.6 Attachment block
 
 ```json
 {
@@ -142,6 +163,7 @@ Run shape:
 - `P` -> `paragraph`
 - `BLOCKQUOTE` -> `blockquote`
 - `UL/OL` -> `list`
+- `TABLE` -> `table`
 - `IMG` -> `attachment`
 - Block `align` comes from element `style.textAlign` (when set).
 - Plain text nodes (non-empty) at root -> `paragraph`
