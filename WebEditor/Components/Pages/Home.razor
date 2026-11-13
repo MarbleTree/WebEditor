@@ -194,7 +194,7 @@ else
             "paragraph" => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>",
             "blockquote" => $"<blockquote{alignAttribute}>{RenderRuns(block.Content)}</blockquote>",
             "list" => RenderList(block, alignAttribute),
-            "table" => RenderTable(block, alignAttribute),
+            "table" => RenderTable(block),
             "attachment" => RenderAttachment(block, alignAttribute),
             _ => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>"
         };
@@ -222,7 +222,7 @@ else
         return builder.ToString();
     }
 
-    private static string RenderTable(DocumentBlock block, string alignAttribute)
+    private static string RenderTable(DocumentBlock block)
     {
         var rows = block.Rows ?? [];
 
@@ -231,15 +231,58 @@ else
             return string.Empty;
         }
 
-        var builder = new StringBuilder($"<table class=\"table table-bordered\"{alignAttribute}><tbody>");
+        var styleParts = new List<string>();
 
-        foreach (var row in rows)
+        if (!string.IsNullOrWhiteSpace(block.Align))
         {
+            var align = block.Align.Trim().ToLowerInvariant();
+
+            if (align is "left" or "center" or "right" or "justify")
+            {
+                styleParts.Add($"text-align:{align}");
+            }
+        }
+
+        if (block.TableWidth is > 0)
+        {
+            styleParts.Add($"width:{block.TableWidth.Value}px");
+        }
+
+        var tableStyle = styleParts.Count > 0
+            ? $" style=\"{string.Join(';', styleParts)};\""
+            : string.Empty;
+
+        var builder = new StringBuilder($"<table class=\"table table-bordered\"{tableStyle}><tbody>");
+
+        for (var rowIndex = 0; rowIndex < rows.Count; rowIndex += 1)
+        {
+            var row = rows[rowIndex];
             builder.Append("<tr>");
 
-            foreach (var cell in row)
+            for (var columnIndex = 0; columnIndex < row.Count; columnIndex += 1)
             {
-                builder.Append($"<td>{RenderRuns(cell)}</td>");
+                var cell = row[columnIndex];
+                var cellStyles = new List<string>();
+
+                if (block.ColumnWidths is not null
+                    && columnIndex < block.ColumnWidths.Count
+                    && block.ColumnWidths[columnIndex] > 0)
+                {
+                    cellStyles.Add($"width:{block.ColumnWidths[columnIndex]}px");
+                }
+
+                if (block.RowHeights is not null
+                    && rowIndex < block.RowHeights.Count
+                    && block.RowHeights[rowIndex] > 0)
+                {
+                    cellStyles.Add($"height:{block.RowHeights[rowIndex]}px");
+                }
+
+                var cellStyle = cellStyles.Count > 0
+                    ? $" style=\"{string.Join(';', cellStyles)};\""
+                    : string.Empty;
+
+                builder.Append($"<td{cellStyle}>{RenderRuns(cell)}</td>");
             }
 
             builder.Append("</tr>");

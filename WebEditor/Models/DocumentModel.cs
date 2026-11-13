@@ -36,6 +36,12 @@ public sealed class DocumentBlock
 
     public List<List<List<DocumentRun>>>? Rows { get; set; }
 
+    public int? TableWidth { get; set; }
+
+    public List<int>? ColumnWidths { get; set; }
+
+    public List<int>? RowHeights { get; set; }
+
     public string? AttachmentId { get; set; }
 
     public string? Src { get; set; }

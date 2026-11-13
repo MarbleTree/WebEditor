@@ -97,6 +97,9 @@ Additional fields depend on block `type`.
 {
   "id": "b5",
   "type": "table",
+	"tableWidth": 640,
+  "columnWidths": [220, 420],
+  "rowHeights": [42, 36],
   "rows": [
     [
       [ { "text": "R1C1" } ],
@@ -111,6 +114,9 @@ Additional fields depend on block `type`.
 ```
 
 - `rows` (`array<array<array<run>>>`): table rows -> cells -> inline runs.
+- `tableWidth` (`number`, optional): explicit table width in px when user resizes table border.
+- `columnWidths` (`array<number>`, optional): per-column pixel widths when user resizes vertical cell borders.
+- `rowHeights` (`array<number>`, optional): per-row pixel heights when user resizes horizontal cell borders.
 
 ### 2.6 Attachment block
 

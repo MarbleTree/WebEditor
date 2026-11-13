@@ -34,7 +34,7 @@ Configure `ArticleService` in `WebEditor/appsettings.json` or `WebEditor/appsett
 
 ```json
 "ArticleService": {
-  "BaseUrl": "https://localhost:32773",
+  "BaseUrl": "http://localhost:32772",
   "TenantId": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 }
 ```
