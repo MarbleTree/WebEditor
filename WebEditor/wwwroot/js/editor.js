@@ -388,14 +388,83 @@
         menu.className = "cell-context-menu";
         menu.hidden = true;
 
-        const actions = [
+        const backgroundButton = document.createElement("button");
+        backgroundButton.type = "button";
+        backgroundButton.className = "cell-context-item has-submenu";
+        backgroundButton.dataset.action = "show-background-colors";
+        backgroundButton.innerHTML = "<span>Background color</span><span class=\"submenu-chevron\">›</span>";
+        menu.appendChild(backgroundButton);
+
+        const backgroundPanel = document.createElement("div");
+        backgroundPanel.className = "cell-context-submenu";
+        backgroundPanel.dataset.group = "background";
+        backgroundPanel.hidden = true;
+
+        const clearColorButton = document.createElement("button");
+        clearColorButton.type = "button";
+        clearColorButton.className = "cell-context-color clear-color";
+        clearColorButton.dataset.action = "set-background-color";
+        clearColorButton.dataset.color = "";
+        clearColorButton.textContent = "No color";
+        backgroundPanel.appendChild(clearColorButton);
+
+        const colors = [
+            "#f8fafc", "#fee2e2", "#ffedd5", "#fef3c7", "#ecfccb", "#dcfce7", "#dbeafe", "#ede9fe", "#fce7f3", "#f3f4f6",
+            "#e2e8f0", "#fecaca", "#fed7aa", "#fde68a", "#d9f99d", "#bbf7d0", "#bfdbfe", "#ddd6fe", "#fbcfe8", "#e5e7eb",
+            "#cbd5e1", "#fca5a5", "#fdba74", "#fcd34d", "#bef264", "#86efac", "#93c5fd", "#c4b5fd", "#f9a8d4", "#d1d5db"
+        ];
+
+        colors.forEach(color => {
+            const colorButton = document.createElement("button");
+            colorButton.type = "button";
+            colorButton.className = "cell-context-color";
+            colorButton.dataset.action = "set-background-color";
+            colorButton.dataset.color = color;
+            colorButton.title = color;
+            colorButton.style.backgroundColor = color;
+            backgroundPanel.appendChild(colorButton);
+        });
+
+        menu.appendChild(backgroundPanel);
+
+        const verticalAlignButton = document.createElement("button");
+        verticalAlignButton.type = "button";
+        verticalAlignButton.className = "cell-context-item has-submenu";
+        verticalAlignButton.dataset.action = "show-vertical-align";
+        verticalAlignButton.innerHTML = "<span>Vertical alignment</span><span class=\"submenu-chevron\">›</span>";
+        menu.appendChild(verticalAlignButton);
+
+        const verticalPanel = document.createElement("div");
+        verticalPanel.className = "cell-context-submenu align-options";
+        verticalPanel.dataset.group = "vertical";
+        verticalPanel.hidden = true;
+
+        [
+            { value: "top", label: "Top" },
+            { value: "middle", label: "Middle" },
+            { value: "bottom", label: "Bottom" }
+        ].forEach(item => {
+            const alignButton = document.createElement("button");
+            alignButton.type = "button";
+            alignButton.className = "cell-context-align";
+            alignButton.dataset.action = "set-vertical-align";
+            alignButton.dataset.value = item.value;
+            alignButton.textContent = item.label;
+            verticalPanel.appendChild(alignButton);
+        });
+
+        menu.appendChild(verticalPanel);
+
+        const divider = document.createElement("div");
+        divider.className = "cell-context-divider";
+        menu.appendChild(divider);
+
+        [
             { action: "add-column-right", label: "Add column right" },
             { action: "add-row-below", label: "Add row below" },
             { action: "delete-column", label: "Delete column" },
             { action: "delete-row", label: "Delete row" }
-        ];
-
-        actions.forEach(item => {
+        ].forEach(item => {
             const button = document.createElement("button");
             button.type = "button";
             button.className = "cell-context-item";
@@ -437,12 +506,24 @@
             event.preventDefault();
             event.stopPropagation();
 
-            this.executeCellMenuAction(button.dataset.action || "");
+            this.executeCellMenuAction(button);
         });
     }
 
 
-    executeCellMenuAction(action) {
+    executeCellMenuAction(button) {
+
+        const action = button?.dataset?.action || "";
+
+        if (action === "show-background-colors") {
+            this.toggleCellSubmenu("background");
+            return;
+        }
+
+        if (action === "show-vertical-align") {
+            this.toggleCellSubmenu("vertical");
+            return;
+        }
 
         if (!this.activeTableCell) {
             this.hideCellContextMenu();
@@ -453,6 +534,12 @@
         this.hideCellContextMenu();
 
         switch (action) {
+            case "set-background-color":
+                this.applyCellBackgroundColor(button.dataset.color || "");
+                break;
+            case "set-vertical-align":
+                this.applyCellVerticalAlign(button.dataset.value || "top");
+                break;
             case "add-column-right":
                 this.insertColumn();
                 break;
@@ -470,6 +557,98 @@
         }
 
         this.positionCellMenuTrigger();
+    }
+
+
+    toggleCellSubmenu(group) {
+
+        if (!this.cellMenuPanel) {
+            return;
+        }
+
+        const panel = this.cellMenuPanel.querySelector(`.cell-context-submenu[data-group='${group}']`);
+
+        if (!panel) {
+            return;
+        }
+
+        const shouldShow = panel.hidden;
+
+        this.cellMenuPanel
+            .querySelectorAll(".cell-context-submenu")
+            .forEach(item => {
+                item.hidden = true;
+            });
+
+        panel.hidden = !shouldShow;
+
+        if (shouldShow) {
+            this.syncCellSubmenuSelection(group);
+        }
+    }
+
+
+    syncCellSubmenuSelection(group) {
+
+        if (!this.cellMenuPanel || !this.activeTableCell) {
+            return;
+        }
+
+        if (group === "vertical") {
+            const currentAlign = (this.activeTableCell.style.verticalAlign || "top").trim().toLowerCase();
+
+            this.cellMenuPanel.querySelectorAll(".cell-context-align").forEach(button => {
+                button.classList.toggle("is-selected", button.dataset.value === currentAlign);
+            });
+        }
+
+        if (group === "background") {
+            const currentColor = (this.activeTableCell.style.backgroundColor || "").trim().toLowerCase();
+
+            this.cellMenuPanel.querySelectorAll(".cell-context-color").forEach(button => {
+                const buttonColor = (button.dataset.color || "").trim().toLowerCase();
+                const selected = currentColor
+                    ? buttonColor && currentColor === buttonColor
+                    : buttonColor === "";
+                button.classList.toggle("is-selected", selected);
+            });
+        }
+    }
+
+
+    applyCellBackgroundColor(color) {
+
+        if (!this.activeTableCell) {
+            return;
+        }
+
+        const normalized = (color || "").trim();
+
+        if (!normalized) {
+            this.activeTableCell.style.backgroundColor = "";
+        } else {
+            this.activeTableCell.style.backgroundColor = normalized;
+        }
+
+        this.updateOutputs();
+    }
+
+
+    applyCellVerticalAlign(value) {
+
+        if (!this.activeTableCell) {
+            return;
+        }
+
+        const normalized = (value || "top").trim().toLowerCase();
+
+        if (normalized === "middle" || normalized === "bottom") {
+            this.activeTableCell.style.verticalAlign = normalized;
+        } else {
+            this.activeTableCell.style.verticalAlign = "";
+        }
+
+        this.updateOutputs();
     }
 
 
@@ -537,6 +716,10 @@
             return;
         }
 
+        this.cellMenuPanel.querySelectorAll(".cell-context-submenu").forEach(panel => {
+            panel.hidden = true;
+        });
+
         this.positionCellContextMenu();
         this.cellMenuPanel.hidden = false;
 
@@ -552,6 +735,10 @@
         if (!this.cellMenuPanel || this.cellMenuPanel.hidden) {
             return;
         }
+
+        this.cellMenuPanel.querySelectorAll(".cell-context-submenu").forEach(panel => {
+            panel.hidden = true;
+        });
 
         this.cellMenuPanel.hidden = true;
 
@@ -1270,7 +1457,10 @@
                 cell.style.padding = "6px";
                 cell.style.minWidth = "72px";
                 cell.style.minHeight = "28px";
-                cell.style.verticalAlign = "top";
+
+                if (!cell.style.verticalAlign) {
+                    cell.style.verticalAlign = "top";
+                }
             });
         });
     }
@@ -1632,6 +1822,7 @@
             const tableWidth = this.getPixelStyleValue(element.style.width);
             const columnWidths = this.getTableColumnWidths(element);
             const rowHeights = this.getTableRowHeights(element);
+            const cellStyles = this.getTableCellStyles(element);
 
             return {
                 id: this.nextBlockId(),
@@ -1640,7 +1831,8 @@
                 rows,
                 tableWidth,
                 columnWidths,
-                rowHeights
+                rowHeights,
+                cellStyles
             };
         }
 
@@ -1748,6 +1940,31 @@
 
         return heights.some(height => height !== null)
             ? heights.map(height => height ?? 0)
+            : null;
+    }
+
+
+    getTableCellStyles(table) {
+
+        const styles = Array.from(table?.rows ?? []).map(row =>
+            Array.from(row.cells).map(cell => {
+                const backgroundColor = (cell.style.backgroundColor || "").trim();
+                const verticalAlign = (cell.style.verticalAlign || "").trim().toLowerCase();
+                const style = {};
+
+                if (backgroundColor) {
+                    style.backgroundColor = backgroundColor;
+                }
+
+                if (verticalAlign && (verticalAlign === "middle" || verticalAlign === "bottom")) {
+                    style.verticalAlign = verticalAlign;
+                }
+
+                return Object.keys(style).length > 0 ? style : null;
+            }));
+
+        return styles.some(row => row.some(cell => cell !== null))
+            ? styles
             : null;
     }
 

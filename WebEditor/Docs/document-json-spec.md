@@ -100,6 +100,16 @@ Additional fields depend on block `type`.
 	"tableWidth": 640,
   "columnWidths": [220, 420],
   "rowHeights": [42, 36],
+	"cellStyles": [
+	[
+	  { "backgroundColor": "#fef3c7", "verticalAlign": "middle" },
+	  null
+	],
+	[
+	  null,
+	  { "verticalAlign": "bottom" }
+	]
+  ],
   "rows": [
     [
       [ { "text": "R1C1" } ],
@@ -117,6 +127,9 @@ Additional fields depend on block `type`.
 - `tableWidth` (`number`, optional): explicit table width in px when user resizes table border.
 - `columnWidths` (`array<number>`, optional): per-column pixel widths when user resizes vertical cell borders.
 - `rowHeights` (`array<number>`, optional): per-row pixel heights when user resizes horizontal cell borders.
+- `cellStyles` (`array<array<object|null>>`, optional): per-cell visual style metadata aligned with `rows` indexes.
+  - `backgroundColor` (`string`, optional): CSS color used for cell background.
+  - `verticalAlign` (`string`, optional): one of `middle` or `bottom` (`top` is treated as default).
 
 ### 2.6 Attachment block
 

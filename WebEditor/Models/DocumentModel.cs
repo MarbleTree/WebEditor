@@ -42,6 +42,8 @@ public sealed class DocumentBlock
 
     public List<int>? RowHeights { get; set; }
 
+    public List<List<TableCellStyle?>>? CellStyles { get; set; }
+
     public string? AttachmentId { get; set; }
 
     public string? Src { get; set; }
@@ -54,4 +56,11 @@ public sealed class DocumentRun
     public string Text { get; set; } = string.Empty;
 
     public List<object>? Marks { get; set; }
+}
+
+public sealed class TableCellStyle
+{
+    public string? BackgroundColor { get; set; }
+
+    public string? VerticalAlign { get; set; }
 }

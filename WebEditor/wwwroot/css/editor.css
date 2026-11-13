@@ -143,7 +143,7 @@
 .cell-context-menu {
     position: fixed;
     z-index: 25;
-    width: 228px;
+    width: 236px;
     background: #fff;
     border: 1px solid #d0d7de;
     border-radius: 8px;
@@ -161,6 +161,9 @@
         border-radius: 6px;
         background: transparent;
         text-align: left;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         padding: 10px 12px;
         font-size: 14px;
         line-height: 1.3;
@@ -170,6 +173,95 @@
 
         .cell-context-menu .cell-context-item:hover {
             background: #eef2ff;
+        }
+
+    .cell-context-menu .cell-context-item .submenu-chevron {
+        color: #6b7280;
+        font-size: 16px;
+        line-height: 1;
+    }
+
+.cell-context-divider {
+    height: 1px;
+    margin: 6px 4px;
+    background: #e5e7eb;
+}
+
+.cell-context-submenu {
+    margin: 2px 4px 8px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    padding: 8px;
+}
+
+    .cell-context-submenu[hidden] {
+        display: none;
+    }
+
+    .cell-context-submenu.align-options {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .cell-context-submenu .cell-context-align {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: #fff;
+        color: #1f2937;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 8px;
+        cursor: pointer;
+    }
+
+        .cell-context-submenu .cell-context-align:hover,
+        .cell-context-submenu .cell-context-align.is-selected {
+            border-color: #60a5fa;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+    .cell-context-submenu .cell-context-color {
+        width: 24px;
+        height: 24px;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+    }
+
+    .cell-context-submenu .cell-context-color.clear-color {
+        grid-column: 1 / -1;
+        width: 100%;
+        height: 28px;
+        margin-bottom: 8px;
+        padding: 0 8px;
+        text-align: left;
+        font-size: 12px;
+        color: #374151;
+        background: #fff;
+    }
+
+        .cell-context-submenu .cell-context-color.clear-color:hover {
+            background: #f3f4f6;
+        }
+
+    .cell-context-submenu[data-group="background"] {
+        display: grid;
+        grid-template-columns: repeat(10, 24px);
+        gap: 5px;
+        width: max-content;
+        justify-content: start;
+        background: #ffffff;
+    }
+
+        .cell-context-submenu[data-group="background"] .cell-context-color.is-selected {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 1px #2563eb;
         }
 
 .separator {

@@ -278,6 +278,26 @@ else
                     cellStyles.Add($"height:{block.RowHeights[rowIndex]}px");
                 }
 
+                if (block.CellStyles is not null
+                    && rowIndex < block.CellStyles.Count
+                    && block.CellStyles[rowIndex] is not null
+                    && columnIndex < block.CellStyles[rowIndex].Count)
+                {
+                    var cellStyleEntry = block.CellStyles[rowIndex][columnIndex];
+
+                    if (!string.IsNullOrWhiteSpace(cellStyleEntry?.BackgroundColor))
+                    {
+                        cellStyles.Add($"background-color:{cellStyleEntry.BackgroundColor}");
+                    }
+
+                    var verticalAlign = cellStyleEntry?.VerticalAlign?.Trim().ToLowerInvariant();
+
+                    if (verticalAlign is "top" or "middle" or "bottom")
+                    {
+                        cellStyles.Add($"vertical-align:{verticalAlign}");
+                    }
+                }
+
                 var cellStyle = cellStyles.Count > 0
                     ? $" style=\"{string.Join(';', cellStyles)};\""
                     : string.Empty;
