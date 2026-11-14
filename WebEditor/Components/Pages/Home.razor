@@ -278,6 +278,21 @@ else
                     cellStyles.Add($"height:{block.RowHeights[rowIndex]}px");
                 }
 
+                if (block.CellPadding is > 0)
+                {
+                    cellStyles.Add($"padding:{block.CellPadding.Value}px");
+                }
+
+                if (block.CellBorderWidth is > 0)
+                {
+                    cellStyles.Add($"border-width:{block.CellBorderWidth.Value}px");
+                }
+
+                if (!string.IsNullOrWhiteSpace(block.CellBorderColor))
+                {
+                    cellStyles.Add($"border-color:{block.CellBorderColor}");
+                }
+
                 if (block.CellStyles is not null
                     && rowIndex < block.CellStyles.Count
                     && block.CellStyles[rowIndex] is not null
@@ -302,7 +317,18 @@ else
                     ? $" style=\"{string.Join(';', cellStyles)};\""
                     : string.Empty;
 
-                builder.Append($"<td{cellStyle}>{RenderRuns(cell)}</td>");
+                var cellMeta = block.CellMeta is not null
+                    && rowIndex < block.CellMeta.Count
+                    && block.CellMeta[rowIndex] is not null
+                    && columnIndex < block.CellMeta[rowIndex].Count
+                    ? block.CellMeta[rowIndex][columnIndex]
+                    : null;
+
+                var colSpanAttribute = cellMeta?.ColSpan is > 1 ? $" colspan=\"{cellMeta.ColSpan.Value}\"" : string.Empty;
+                var rowSpanAttribute = cellMeta?.RowSpan is > 1 ? $" rowspan=\"{cellMeta.RowSpan.Value}\"" : string.Empty;
+                var cellTag = cellMeta?.IsHeader == true ? "th" : "td";
+
+                builder.Append($"<{cellTag}{colSpanAttribute}{rowSpanAttribute}{cellStyle}>{RenderRuns(cell)}</{cellTag}>");
             }
 
             builder.Append("</tr>");

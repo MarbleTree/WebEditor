@@ -149,6 +149,8 @@
     border-radius: 8px;
     box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
     padding: 8px;
+    max-height: none;
+    overflow: visible;
 }
 
     .cell-context-menu[hidden] {
@@ -188,12 +190,14 @@
 }
 
 .cell-context-submenu {
-    margin: 2px 4px 8px;
+    position: fixed;
+    z-index: 26;
     background: #ffffff;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
     padding: 8px;
+    min-width: 220px;
 }
 
     .cell-context-submenu[hidden] {
@@ -205,6 +209,18 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
     }
+
+    .cell-context-submenu.grouped-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 236px;
+    }
+
+        .cell-context-submenu.grouped-actions .cell-context-item {
+            justify-content: flex-start;
+            gap: 8px;
+        }
 
     .cell-context-submenu .cell-context-align {
         border: 1px solid #d1d5db;
@@ -326,6 +342,12 @@
         min-width: 72px;
         vertical-align: top;
     }
+
+        .editor td.we-cell-selected,
+        .editor th.we-cell-selected {
+            outline: 2px solid #3b82f6;
+            outline-offset: -2px;
+        }
 
 .html-preview {
     margin-top: 30px;

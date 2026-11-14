@@ -44,6 +44,14 @@ public sealed class DocumentBlock
 
     public List<List<TableCellStyle?>>? CellStyles { get; set; }
 
+    public List<List<TableCellMeta?>>? CellMeta { get; set; }
+
+    public int? CellPadding { get; set; }
+
+    public int? CellBorderWidth { get; set; }
+
+    public string? CellBorderColor { get; set; }
+
     public string? AttachmentId { get; set; }
 
     public string? Src { get; set; }
@@ -63,4 +71,13 @@ public sealed class TableCellStyle
     public string? BackgroundColor { get; set; }
 
     public string? VerticalAlign { get; set; }
+}
+
+public sealed class TableCellMeta
+{
+    public int? ColSpan { get; set; }
+
+    public int? RowSpan { get; set; }
+
+    public bool? IsHeader { get; set; }
 }

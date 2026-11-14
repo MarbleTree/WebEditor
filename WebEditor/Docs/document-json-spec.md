@@ -98,8 +98,21 @@ Additional fields depend on block `type`.
   "id": "b5",
   "type": "table",
 	"tableWidth": 640,
+	"cellPadding": 6,
+  "cellBorderWidth": 1,
+  "cellBorderColor": "rgb(204, 204, 204)",
   "columnWidths": [220, 420],
   "rowHeights": [42, 36],
+	"cellMeta": [
+	[
+	  { "isHeader": true, "colSpan": 2 },
+	  null
+	],
+	[
+	  null,
+	  { "rowSpan": 2 }
+	]
+  ],
 	"cellStyles": [
 	[
 	  { "backgroundColor": "#fef3c7", "verticalAlign": "middle" },
@@ -125,8 +138,15 @@ Additional fields depend on block `type`.
 
 - `rows` (`array<array<array<run>>>`): table rows -> cells -> inline runs.
 - `tableWidth` (`number`, optional): explicit table width in px when user resizes table border.
+- `cellPadding` (`number`, optional): shared cell padding in px from the table cell style preset.
+- `cellBorderWidth` (`number`, optional): shared border width in px from the table cell style preset.
+- `cellBorderColor` (`string`, optional): shared border color from the table cell style preset.
 - `columnWidths` (`array<number>`, optional): per-column pixel widths when user resizes vertical cell borders.
 - `rowHeights` (`array<number>`, optional): per-row pixel heights when user resizes horizontal cell borders.
+- `cellMeta` (`array<array<object|null>>`, optional): per-cell structural metadata aligned with `rows` indexes.
+  - `colSpan` (`number`, optional): colspan value for merged cells.
+  - `rowSpan` (`number`, optional): rowspan value for merged cells.
+  - `isHeader` (`boolean`, optional): when `true`, preview renders `<th>`.
 - `cellStyles` (`array<array<object|null>>`, optional): per-cell visual style metadata aligned with `rows` indexes.
   - `backgroundColor` (`string`, optional): CSS color used for cell background.
   - `verticalAlign` (`string`, optional): one of `middle` or `bottom` (`top` is treated as default).
