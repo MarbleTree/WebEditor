@@ -6,6 +6,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 512 * 1024;
+});
+
 builder.Services.Configure<ArticleServiceOptions>(
     builder.Configuration.GetSection(ArticleServiceOptions.SectionName));
 

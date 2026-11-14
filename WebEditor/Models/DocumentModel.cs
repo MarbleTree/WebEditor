@@ -57,6 +57,10 @@ public sealed class DocumentBlock
     public string? Src { get; set; }
 
     public string? Alt { get; set; }
+
+    public int? ImageWidthPercent { get; set; }
+
+    public string? ImageDisplay { get; set; }
 }
 
 public sealed class DocumentRun

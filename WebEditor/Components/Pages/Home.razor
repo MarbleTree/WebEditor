@@ -195,7 +195,7 @@ else
             "blockquote" => $"<blockquote{alignAttribute}>{RenderRuns(block.Content)}</blockquote>",
             "list" => RenderList(block, alignAttribute),
             "table" => RenderTable(block),
-            "attachment" => RenderAttachment(block, alignAttribute),
+            "attachment" => RenderAttachment(block),
             _ => $"<p{alignAttribute}>{RenderRuns(block.Content)}</p>"
         };
     }
@@ -339,7 +339,7 @@ else
         return builder.ToString();
     }
 
-    private static string RenderAttachment(DocumentBlock block, string alignAttribute)
+    private static string RenderAttachment(DocumentBlock block)
     {
         if (string.IsNullOrWhiteSpace(block.Src))
         {
@@ -348,8 +348,46 @@ else
 
         var src = WebUtility.HtmlEncode(block.Src);
         var alt = WebUtility.HtmlEncode(block.Alt ?? string.Empty);
+        var display = block.ImageDisplay?.Trim().ToLowerInvariant();
+        var styles = new List<string>
+        {
+            "max-width:100%",
+            "height:auto"
+        };
 
-        return $"<img{alignAttribute} src=\"{src}\" alt=\"{alt}\" />";
+        if (block.ImageWidthPercent is > 0 and <= 100)
+        {
+            styles.Add($"width:{block.ImageWidthPercent.Value}%");
+        }
+
+        if (display == "inline")
+        {
+            styles.Add("display:inline");
+        }
+        else
+        {
+            styles.Add("display:block");
+
+            var align = block.Align?.Trim().ToLowerInvariant();
+
+            if (align == "left")
+            {
+                styles.Add("margin-left:0");
+                styles.Add("margin-right:auto");
+            }
+            else if (align == "right")
+            {
+                styles.Add("margin-left:auto");
+                styles.Add("margin-right:0");
+            }
+            else
+            {
+                styles.Add("margin-left:auto");
+                styles.Add("margin-right:auto");
+            }
+        }
+
+        return $"<img style=\"{string.Join(';', styles)};\" src=\"{src}\" alt=\"{alt}\" />";
     }
 
     private static string BuildAlignmentAttribute(string? align)

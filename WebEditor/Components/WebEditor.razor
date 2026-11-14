@@ -7,7 +7,7 @@
     <h3>@ComponentTitle</h3>
 }
 
-<div class="editor-container" @ref="_rootElement">
+<div class="editor-container" data-inline-image-max-bytes="@InlineImageMaxBytes" data-dotnet-sync-max-bytes="@DotNetSyncMaxBytes" @ref="_rootElement">
     @if (ShowToolbar)
     {
         <div class="toolbar">
@@ -41,6 +41,12 @@
             <button type="button" data-command="justifyCenter" title="Align center" aria-label="Align center" class="toolbar-label">C</button>
             <button type="button" data-command="justifyRight" title="Align right" aria-label="Align right" class="toolbar-label">R</button>
             <button type="button" data-command="justifyFull" title="Justify" aria-label="Justify" class="toolbar-label">J</button>
+
+            <div class="separator"></div>
+
+            <button type="button" data-action="insert-image" title="Insert image" aria-label="Insert image" class="toolbar-text">Img</button>
+            <button type="button" data-action="image-display" title="Image display options" aria-label="Image display options" class="toolbar-text">ImgOpt</button>
+            <button type="button" data-action="remove-image" title="Remove selected image" aria-label="Remove selected image" class="toolbar-text">ImgDel</button>
 
             <div class="separator"></div>
 
@@ -96,6 +102,12 @@
 
     [Parameter]
     public EventCallback<string> OnDocumentChanged { get; set; }
+
+    [Parameter]
+    public int InlineImageMaxBytes { get; set; } = 100 * 1024;
+
+    [Parameter]
+    public int DotNetSyncMaxBytes { get; set; } = 256 * 1024;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

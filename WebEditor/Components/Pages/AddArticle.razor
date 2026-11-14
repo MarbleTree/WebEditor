@@ -21,6 +21,11 @@
 <p><strong>Document title:</strong> @_documentTitle</p>
 <p><strong>Block count:</strong> @_blockCount</p>
 
+@if (!string.IsNullOrWhiteSpace(_parseWarning))
+{
+    <p><strong>Warning:</strong> @_parseWarning</p>
+}
+
 <button type="button" @onclick="SaveArticleAsync" disabled="@_isSaving">Save to ArticleService</button>
 
 @if (!string.IsNullOrWhiteSpace(_saveMessage))
@@ -34,16 +39,27 @@
     private int _blockCount;
     private bool _isSaving;
     private string _saveMessage = string.Empty;
+    private string _parseWarning = string.Empty;
     private long? _savedArticleId;
 
     private void HandleDocumentChanged(string documentJson)
     {
-        var parsed = JsonSerializer.Deserialize<DocumentModel>(
-            documentJson,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        try
+        {
+            var parsed = JsonSerializer.Deserialize<DocumentModel>(
+                documentJson,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        _documentTitle = parsed?.Meta?.Title ?? "Untitled";
-        _blockCount = parsed?.Blocks?.Count ?? 0;
+            _documentTitle = parsed?.Meta?.Title ?? "Untitled";
+            _blockCount = parsed?.Blocks?.Count ?? 0;
+            _parseWarning = string.Empty;
+        }
+        catch (JsonException ex)
+        {
+            _documentTitle = "Untitled";
+            _blockCount = 0;
+            _parseWarning = $"Editor JSON parse warning: {ex.Message}";
+        }
     }
 
     private async Task SaveArticleAsync()

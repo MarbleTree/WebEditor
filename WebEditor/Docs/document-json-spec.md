@@ -159,13 +159,24 @@ Additional fields depend on block `type`.
   "type": "attachment",
   "attachmentId": "optional-id-or-null",
   "src": "https://...",
-  "alt": "image alt text"
+	"alt": "image alt text",
+  "imageWidthPercent": 50,
+  "imageDisplay": "medium"
 }
 ```
 
 - `attachmentId` (`string|null`): from `data-attachment-id`
-- `src` (`string|null`): from `<img src>`
+- `src` (`string|null`): from `<img src>` (URL or inline `data:image/...;base64,...`)
 - `alt` (`string`): from `<img alt>`, fallback empty string
+- `imageWidthPercent` (`number`, optional): explicit image width in percent.
+- `imageDisplay` (`string`, optional): display option (`inline`, `small`, `medium`, `large`, `full`).
+
+Notes:
+- Uploaded images are serialized into JSON as attachment blocks.
+- Inline base64 data URLs are supported for small files.
+- Default editor policy: inline up to `100 KB`; for larger files, use a hosted image URL.
+- The inline limit is configurable through the editor container attribute `data-inline-image-max-bytes`.
+- JSON sync to .NET is bounded by `data-dotnet-sync-max-bytes` (default `256 KB`).
 
 ## 3. Inline run model
 
