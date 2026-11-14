@@ -11,7 +11,7 @@
 
 <h1>Add Article</h1>
 
-<WebEditor @bind-Value="_capturedDocumentJson" OnDocumentChanged="HandleDocumentChanged" />
+<WebEditor @ref="_editor" @bind-Value="_capturedDocumentJson" OnDocumentChanged="HandleDocumentChanged" EnableStorageUploads="true" />
 
 <div class="html-preview">
     <h2>Captured JSON in Blazor (save-ready)</h2>
@@ -34,6 +34,7 @@
 }
 
 @code {
+    private global::WebEditor.Components.WebEditor? _editor;
     private string _capturedDocumentJson = string.Empty;
     private string _documentTitle = "Untitled";
     private int _blockCount;
@@ -64,12 +65,6 @@
 
     private async Task SaveArticleAsync()
     {
-        if (string.IsNullOrWhiteSpace(_capturedDocumentJson))
-        {
-            _saveMessage = "Nothing to save yet.";
-            return;
-        }
-
         _isSaving = true;
         _saveMessage = string.Empty;
 
@@ -81,23 +76,26 @@
                 return;
             }
 
+            var json = await (_editor ?? throw new InvalidOperationException("Editor is not initialized.")).GetCurrentDocumentAsync();
+            var document = JsonSerializer.Deserialize<DocumentModel>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                ?? throw new InvalidOperationException("Editor returned an empty document.");
             var now = DateTime.UtcNow;
             var article = new ArticleCreateModel
             {
                 TenantId = ArticleServiceOptions.Value.TenantId,
-                Title = _documentTitle,
+                Title = document.Meta?.Title ?? "Untitled",
                 Author = ArticleServiceOptions.Value.TenantId,
-                Content = _capturedDocumentJson,
+                Content = json,
                 DateCreated = now,
                 DateUpdated = now,
-                Attachments = []
+                Attachments = DocumentAttachments.GetIds(document)
             };
 
             var saved = await ArticleService.CreateArticleAsync(article);
             _savedArticleId = saved.Id;
             _saveMessage = $"Saved article #{saved.Id} for tenant {saved.TenantId}.";
         }
-        catch (HttpRequestException ex)
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or JsonException or Microsoft.JSInterop.JSException)
         {
             _saveMessage = $"Save failed: {ex.Message}";
         }

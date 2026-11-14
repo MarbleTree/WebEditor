@@ -1,13 +1,18 @@
 ﻿@using Microsoft.JSInterop
+@using global::WebEditor.Services
 @implements IAsyncDisposable
 @inject IJSRuntime JS
+@inject StorageServiceClient StorageService
+@inject Microsoft.Extensions.Options.IOptions<StorageServiceOptions> StorageOptions
+@inject Microsoft.Extensions.Options.IOptions<ArticleServiceOptions> ArticleOptions
+@inject ILogger<WebEditor> Logger
 
 @if (ShowComponentTitle)
 {
     <h3>@ComponentTitle</h3>
 }
 
-<div class="editor-container" data-inline-image-max-bytes="@InlineImageMaxBytes" data-dotnet-sync-max-bytes="@DotNetSyncMaxBytes" @ref="_rootElement">
+<div class="editor-container" data-inline-image-max-bytes="@InlineImageMaxBytes" data-dotnet-sync-max-bytes="@DotNetSyncMaxBytes" data-storage-uploads="@EnableStorageUploads.ToString().ToLowerInvariant()" @ref="_rootElement">
     @if (ShowToolbar)
     {
         <div class="toolbar">
@@ -104,10 +109,51 @@
     public EventCallback<string> OnDocumentChanged { get; set; }
 
     [Parameter]
-    public int InlineImageMaxBytes { get; set; } = 100 * 1024;
+    public int InlineImageMaxBytes { get; set; } = 50 * 1024;
 
     [Parameter]
     public int DotNetSyncMaxBytes { get; set; } = 256 * 1024;
+
+    [Parameter]
+    public bool EnableStorageUploads { get; set; }
+
+    public sealed record DocumentSnapshot(string? Json, string? Error);
+    public sealed record UploadResult(string? Id, string? Error);
+
+    public async Task<string> GetCurrentDocumentAsync()
+    {
+        var snapshot = await JS.InvokeAsync<DocumentSnapshot>("webEditorInterop.getDocument", _rootElement);
+        return snapshot.Error is null && snapshot.Json is not null
+            ? snapshot.Json
+            : throw new InvalidOperationException(snapshot.Error ?? "Editor is not initialized.");
+    }
+
+    [JSInvokable]
+    public async Task<UploadResult> UploadImage(IJSStreamReference file, string fileName, string contentType)
+    {
+        try
+        {
+            if (!EnableStorageUploads)
+                throw new InvalidOperationException("Storage uploads are not enabled for this editor.");
+            if (StorageOptions.Value.TenantId != ArticleOptions.Value.TenantId || StorageOptions.Value.TenantId == Guid.Empty)
+                throw new InvalidOperationException("StorageService tenant must match the configured ArticleService tenant.");
+            if (StorageOptions.Value.MaxImageBytes <= 0 || file.Length > StorageOptions.Value.MaxImageBytes)
+                throw new InvalidOperationException($"Image exceeds the configured upload limit of {StorageOptions.Value.MaxImageBytes} bytes.");
+
+            await using var stream = await file.OpenReadStreamAsync(StorageOptions.Value.MaxImageBytes);
+            var id = await StorageService.UploadImageAsync(stream, fileName, contentType);
+            return new UploadResult(id.ToString("D"), null);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or IOException or JSException or System.Text.Json.JsonException)
+        {
+            Logger.LogWarning(ex, "Image upload failed");
+            return new UploadResult(null, $"Image upload failed: {ex.Message}");
+        }
+        finally
+        {
+            await file.DisposeAsync();
+        }
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

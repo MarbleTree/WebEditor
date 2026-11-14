@@ -341,12 +341,15 @@ else
 
     private static string RenderAttachment(DocumentBlock block)
     {
-        if (string.IsNullOrWhiteSpace(block.Src))
+        var imageSource = Guid.TryParse(block.AttachmentId, out var attachmentId) && attachmentId != Guid.Empty
+            ? $"storage/images/{attachmentId:D}"
+            : block.Src;
+        if (string.IsNullOrWhiteSpace(imageSource))
         {
             return string.Empty;
         }
 
-        var src = WebUtility.HtmlEncode(block.Src);
+        var src = WebUtility.HtmlEncode(imageSource);
         var alt = WebUtility.HtmlEncode(block.Alt ?? string.Empty);
         var display = block.ImageDisplay?.Trim().ToLowerInvariant();
         var styles = new List<string>

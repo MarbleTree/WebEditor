@@ -19,6 +19,7 @@
         this.imageMenuTrigger = null;
         this.imageMenuPanel = null;
         this.hasShownDotNetSyncLimitWarning = false;
+        this.pendingImageUploads = 0;
         this.inlineImageMaxBytes = this.getInlineImageMaxBytes();
         this.dotNetSyncMaxBytes = this.getDotNetSyncMaxBytes();
 
@@ -645,7 +646,7 @@
         fileInput.accept = "image/*";
         fileInput.style.display = "none";
 
-        fileInput.addEventListener("change", () => {
+        fileInput.addEventListener("change", async () => {
             const file = fileInput.files?.[0];
 
             if (!file) {
@@ -654,22 +655,30 @@
             }
 
             if (file.size > this.inlineImageMaxBytes) {
-                const maxSizeText = this.formatBytes(this.inlineImageMaxBytes);
-                const fileSizeText = this.formatBytes(file.size);
-                const hostedUrlInput = prompt(
-                    `\"${file.name}\" is ${fileSizeText}, which exceeds the inline JSON limit (${maxSizeText}). Enter hosted image URL:`,
-                    ""
-                );
-
-                if (hostedUrlInput) {
-                    const hostedUrl = hostedUrlInput.trim();
-
-                    if (hostedUrl) {
-                        this.insertImageAtSelection(hostedUrl, file.name);
+                if (this.rootElement.getAttribute("data-storage-uploads") !== "true" || !this.dotNetRef) {
+                    const hostedUrl = prompt(`"${file.name}" exceeds the inline limit (${this.formatBytes(this.inlineImageMaxBytes)}). Enter hosted image URL:`, "");
+                    if (hostedUrl?.trim()) {
+                        this.insertImageAtSelection(hostedUrl.trim(), file.name);
                     }
+                    fileInput.remove();
+                    return;
                 }
 
-                fileInput.remove();
+                this.pendingImageUploads++;
+                try {
+                    const result = await this.dotNetRef.invokeMethodAsync("UploadImage", DotNet.createJSStreamReference(file), file.name, file.type);
+                    if (result.error || !result.id) {
+                        throw new Error(result.error || "StorageService did not return an image ID.");
+                    }
+                    const url = new URL(`storage/images/${result.id}`, document.baseURI).pathname;
+                    this.insertImageAtSelection(url, file.name, result.id);
+                } catch (error) {
+                    console.error("Image upload failed", error);
+                    window.alert(`Image upload failed: ${error.message}`);
+                } finally {
+                    this.pendingImageUploads--;
+                    fileInput.remove();
+                }
                 return;
             }
 
@@ -686,6 +695,7 @@
             };
 
             reader.onerror = () => {
+                window.alert(`Could not read image "${file.name}".`);
                 fileInput.remove();
             };
 
@@ -697,7 +707,7 @@
     }
 
 
-    insertImageAtSelection(src, altText) {
+    insertImageAtSelection(src, altText, attachmentId = null) {
 
         if (!src || !this.editorElement) {
             return;
@@ -706,6 +716,9 @@
         const image = document.createElement("img");
         image.src = src;
         image.alt = altText || "image";
+        if (attachmentId) {
+            image.setAttribute("data-attachment-id", attachmentId);
+        }
         this.setImageDisplayOption(image, "medium");
 
         const paragraph = document.createElement("p");
@@ -3117,7 +3130,7 @@
             return parsed;
         }
 
-        return 100 * 1024;
+        return 50 * 1024;
     }
 
 
@@ -3871,6 +3884,17 @@ window.webEditorInterop = {
 
         const editor = new WysiwygEditor(rootElement, dotNetRef, initialHtml);
         editorInstances.set(rootElement, editor);
+    },
+
+    getDocument(rootElement) {
+        const editor = editorInstances.get(rootElement);
+        if (!editor) return { json: null, error: "Editor is not initialized." };
+        if (editor.pendingImageUploads) return { json: null, error: "Wait for image uploads to finish before saving." };
+        const json = JSON.stringify(editor.buildDocumentModel(), null, 2);
+        if (editor.getUtf8Length(json) > editor.dotNetSyncMaxBytes) {
+            return { json: null, error: "Document exceeds the editor sync limit. Reduce inline image size before saving." };
+        }
+        return { json, error: null };
     },
 
     dispose(rootElement) {

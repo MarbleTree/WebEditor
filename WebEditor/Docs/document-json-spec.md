@@ -173,10 +173,12 @@ Additional fields depend on block `type`.
 
 Notes:
 - Uploaded images are serialized into JSON as attachment blocks.
-- Inline base64 data URLs are supported for small files.
-- Default editor policy: inline up to `100 KB`; for larger files, use a hosted image URL.
-- The inline limit is configurable through the editor container attribute `data-inline-image-max-bytes`.
-- JSON sync to .NET is bounded by `data-dotnet-sync-max-bytes` (default `256 KB`).
+- Inline base64 data URLs are supported for small files. The default inline limit is 50 KiB (51,200 bytes).
+- In Add Article, larger images are uploaded to StorageService. `attachmentId` is the storage object GUID, `src` is the WebEditor download path, and the article's `attachments` array contains the distinct storage IDs referenced by the document. The preview resolves stored images by ID; inline and hosted images still use `src`.
+- Storage uploads require a configured tenant and existing attachment folder. The storage tenant must match the ArticleService tenant. See the README for configuration and supported image types.
+- Editors without storage uploads enabled prompt for a hosted image URL instead.
+- The inline limit is configurable through `InlineImageMaxBytes` / `data-inline-image-max-bytes`.
+- JSON sync to .NET is bounded by `data-dotnet-sync-max-bytes` (default `256 KB`); saving is blocked if the current document exceeds it.
 
 ## 3. Inline run model
 
