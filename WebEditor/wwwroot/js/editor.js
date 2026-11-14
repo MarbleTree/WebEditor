@@ -86,9 +86,10 @@
         this.handleCellMenuViewportChange = () => {
             this.positionCellMenuTrigger();
             this.positionCellContextMenu();
-            this.positionVisibleCellSubmenus();
+            this.positionVisibleSubmenus(this.cellMenuPanel);
             this.positionImageMenuTrigger();
             this.positionImageContextMenu();
+            this.positionVisibleSubmenus(this.imageMenuPanel);
         };
 
         this.handleImageMenuDocumentMouseDown = event => {
@@ -774,6 +775,7 @@
         }
 
         this.setImageDisplayOption(image, option.trim().toLowerCase());
+        this.positionImageMenuTrigger();
         this.updateOutputs();
     }
 
@@ -1453,27 +1455,55 @@
         trigger.hidden = true;
 
         const menu = document.createElement("div");
-        menu.className = "image-context-menu";
+        menu.className = "image-context-menu cell-context-menu";
         menu.hidden = true;
 
         [
-            { action: "image-inline", label: "Display: Inline" },
-            { action: "image-small", label: "Display: Small" },
-            { action: "image-medium", label: "Display: Medium" },
-            { action: "image-large", label: "Display: Large" },
-            { action: "image-full", label: "Display: Full width" },
-            { action: "image-align-left", label: "Align left" },
-            { action: "image-align-center", label: "Align center" },
-            { action: "image-align-right", label: "Align right" },
-            { action: "image-remove", label: "Remove image" }
-        ].forEach(item => {
+            {
+                group: "size", label: "Image size", items: [
+                    { action: "image-inline", label: "Inline" },
+                    { action: "image-small", label: "Small" },
+                    { action: "image-medium", label: "Medium" },
+                    { action: "image-large", label: "Large" },
+                    { action: "image-full", label: "Full width" }
+                ]
+            },
+            {
+                group: "align", label: "Image align", items: [
+                    { action: "image-align-left", label: "Align left" },
+                    { action: "image-align-center", label: "Align center" },
+                    { action: "image-align-right", label: "Align right" }
+                ]
+            }
+        ].forEach(group => {
             const button = document.createElement("button");
             button.type = "button";
-            button.className = "image-context-item";
-            button.dataset.action = item.action;
-            button.textContent = item.label;
+            button.className = "cell-context-item has-submenu";
+            button.dataset.action = `show-image-${group.group}`;
+            button.innerHTML = `<span>${group.label}</span><span class="submenu-chevron">›</span>`;
             menu.appendChild(button);
+
+            const panel = document.createElement("div");
+            panel.className = "cell-context-submenu grouped-actions";
+            panel.dataset.group = group.group;
+            panel.hidden = true;
+            group.items.forEach(item => {
+                const option = document.createElement("button");
+                option.type = "button";
+                option.className = "cell-context-item";
+                option.dataset.action = item.action;
+                option.textContent = item.label;
+                panel.appendChild(option);
+            });
+            menu.appendChild(panel);
         });
+
+        const removeButton = document.createElement("button");
+        removeButton.type = "button";
+        removeButton.className = "cell-context-item";
+        removeButton.dataset.action = "image-remove";
+        removeButton.textContent = "Delete image";
+        menu.appendChild(removeButton);
 
         this.rootElement.appendChild(trigger);
         this.rootElement.appendChild(menu);
@@ -1506,7 +1536,18 @@
 
             event.preventDefault();
             event.stopPropagation();
-            this.executeImageMenuAction(button.dataset.action || "");
+            const action = button.dataset.action || "";
+            if (action === "show-image-size" || action === "show-image-align") {
+                const group = action === "show-image-size" ? "size" : "align";
+                const panel = menu.querySelector(`.cell-context-submenu[data-group='${group}']`);
+                const shouldShow = panel.hidden;
+                this.hideSubmenus(menu);
+                if (shouldShow) {
+                    this.positionCellSubmenu(panel, button);
+                }
+                return;
+            }
+            this.executeImageMenuAction(action);
         });
     }
 
@@ -1554,6 +1595,7 @@
         }
 
         this.hideImageContextMenu();
+        this.positionImageMenuTrigger();
         this.updateOutputs();
     }
 
@@ -1599,6 +1641,7 @@
             return;
         }
 
+        this.hideSubmenus(this.imageMenuPanel);
         this.imageMenuPanel.hidden = true;
         document.removeEventListener("mousedown", this.handleImageMenuDocumentMouseDown, true);
         document.removeEventListener("keydown", this.handleImageMenuDocumentKeyDown, true);
@@ -1831,13 +1874,25 @@
 
     hideAllCellSubmenus() {
 
-        if (!this.cellMenuPanel) {
-            return;
-        }
+        this.hideSubmenus(this.cellMenuPanel);
+    }
 
-        this.cellMenuPanel.querySelectorAll(".cell-context-submenu").forEach(panel => {
+
+    hideSubmenus(menu) {
+
+        menu?.querySelectorAll(".cell-context-submenu").forEach(panel => {
             panel.hidden = true;
             panel.removeAttribute("data-anchor-action");
+        });
+    }
+
+
+    positionVisibleSubmenus(menu) {
+
+        menu?.querySelectorAll(".cell-context-submenu:not([hidden])").forEach(panel => {
+            const anchor = Array.from(menu.querySelectorAll("button.has-submenu"))
+                .find(button => button.dataset.action === panel.dataset.anchorAction);
+            this.positionCellSubmenu(panel, anchor);
         });
     }
 

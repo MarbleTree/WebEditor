@@ -200,10 +200,6 @@
     min-width: 220px;
 }
 
-    .cell-context-submenu[hidden] {
-        display: none;
-    }
-
     .cell-context-submenu.align-options {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -279,6 +275,10 @@
             border-color: #2563eb;
             box-shadow: 0 0 0 1px #2563eb;
         }
+
+.cell-context-submenu[hidden] {
+    display: none;
+}
 
 .image-context-trigger {
     position: fixed;
